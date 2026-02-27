@@ -1,0 +1,174 @@
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Root ─────────────────────────────────────────────────────────────────── */
+html {
+  height: 100%;
+  height: 100dvh;
+  background: #000;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #000;
+  touch-action: none; /* prevent pull-to-refresh and pinch-zoom on the body */
+}
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+#app {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #000;
+}
+
+/* ── Slide container ──────────────────────────────────────────────────────── */
+/* Clips overflowing panels. Panels use position:absolute and translate. */
+#slide-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Individual panels ────────────────────────────────────────────────────── */
+.slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+
+/* ── Video element ────────────────────────────────────────────────────────── */
+/* object-fit: cover fills the portrait frame cleanly for 9:16 footage.      */
+/* On landscape screens it crops to centre — use contain if you prefer bars. */
+.video-el {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  background: #000;
+}
+
+@media (orientation: landscape) {
+  .video-el {
+    object-fit: contain; /* show full portrait frame with side bars on desktop */
+  }
+}
+
+/* ── Overlay ──────────────────────────────────────────────────────────────── */
+/* Sits above everything. Pointer-events off by default; re-enabled on children. */
+#overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── Tap zones ────────────────────────────────────────────────────────────── */
+.tap-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  pointer-events: all;
+  cursor: pointer;
+  /* Uncomment for debugging: background: rgba(255, 0, 0, 0.1); */
+}
+
+#tap-left  { left: 0; }
+#tap-right { right: 0; }
+
+/* ── Loading overlay ──────────────────────────────────────────────────────── */
+#loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#loading-overlay.visible {
+  opacity: 1;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Unmute button ────────────────────────────────────────────────────────── */
+#unmute-btn {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  pointer-events: all;
+  transition: transform 0.15s ease, background 0.15s ease;
+  /* Remove default button styles */
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#unmute-btn:active {
+  transform: scale(0.92);
+  background: rgba(0, 0, 0, 0.65);
+}
+
+/* ── Footer note ──────────────────────────────────────────────────────────── */
+#footer-note {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  opacity: 0.3;
+  pointer-events: none;
+  white-space: nowrap;
+  user-select: none;
+}
+

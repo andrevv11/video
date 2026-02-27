@@ -1,0 +1,14 @@
+{
+  "name": "video-gallery",
+  "version": "1.0.0",
+  "description": "Mobile-first portrait video gallery for iPhone travel footage",
+  "scripts": {
+    "build": "bun build src/main.ts --outfile public/bundle.js --minify",
+    "dev": "bun build src/main.ts --outfile public/bundle.js --watch",
+    "serve": "bun run scripts/serve.ts",
+    "start": "bun run dev & bun run serve"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

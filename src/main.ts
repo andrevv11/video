@@ -5,7 +5,7 @@ import type { Video } from './types';
 // Add your own video filenames here. Place MP4 files in public/videos/.
 // Relative paths work on both localhost and GitHub Pages.
 const VIDEOS: Video[] = [
-  { url: 'videos/sri_lanka.mp4',       title: 'Sri Lanka'        },
+  { url: 'videos/sri_lanka.mov',       title: 'Sri Lanka'        },
   { url: 'videos/uk_glastonbury.mp4',  title: 'UK · Glastonbury' },
   { url: 'videos/india.mp4',           title: 'India'            },
 ];

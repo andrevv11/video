@@ -35,6 +35,10 @@ export class VideoPlayer {
     this.el.pause();
   }
 
+  seekToStart(): void {
+    this.el.currentTime = 0;
+  }
+
   setMuted(muted: boolean): void {
     this.el.muted = muted;
   }

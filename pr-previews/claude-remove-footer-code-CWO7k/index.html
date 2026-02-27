@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Video Gallery</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- Slide container: panels slide within this clipping region -->
+    <div id="slide-container">
+
+      <!-- Panel A: one of two alternating video slots -->
+      <div class="slide" id="panel-a">
+        <video id="video-a" class="video-el" playsinline muted preload="auto"></video>
+      </div>
+
+      <!-- Panel B: the other slot -->
+      <div class="slide" id="panel-b">
+        <video id="video-b" class="video-el" playsinline muted preload="auto"></video>
+      </div>
+
+    </div>
+
+    <!-- Overlay UI: sits above the video, pointer-events only on interactive elements -->
+    <div id="overlay">
+
+      <!-- Tap zones: 40% wide each, full height -->
+      <div id="tap-left"  class="tap-zone" role="button" aria-label="Previous video"></div>
+      <div id="tap-right" class="tap-zone" role="button" aria-label="Next video"></div>
+
+      <!-- Loading spinner -->
+      <div id="loading-overlay" aria-hidden="true">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Mute toggle -->
+      <button id="unmute-btn" type="button" aria-label="Unmute">🔇</button>
+
+    </div>
+
+  </div>
+
+  <script src="bundle.js" defer></script>
+</body>
+</html>

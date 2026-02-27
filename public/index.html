@@ -18,12 +18,12 @@
 
       <!-- Panel A: one of two alternating video slots -->
       <div class="slide" id="panel-a">
-        <video id="video-a" class="video-el" playsinline muted></video>
+        <video id="video-a" class="video-el" playsinline muted preload="auto"></video>
       </div>
 
       <!-- Panel B: the other slot -->
       <div class="slide" id="panel-b">
-        <video id="video-b" class="video-el" playsinline muted></video>
+        <video id="video-b" class="video-el" playsinline muted preload="auto"></video>
       </div>
 
     </div>
@@ -42,9 +42,6 @@
 
       <!-- Mute toggle -->
       <button id="unmute-btn" type="button" aria-label="Unmute">🔇</button>
-
-      <!-- Progress counter -->
-      <div id="progress-label" aria-live="polite"></div>
 
     </div>
 

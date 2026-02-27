@@ -1,37 +1,26 @@
 import { VideoPlayer } from './player';
 import type { Video, PanelId, GalleryState } from './types';
 
-const SLIDE_DURATION = 420;
-const SLIDE_EASING = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+const SLIDE_DURATION = 840;
+const SLIDE_EASING = 'ease-in-out';
 
 export class Gallery {
   private state: GalleryState;
   private players: Record<PanelId, VideoPlayer>;
   private panelEls: Record<PanelId, HTMLElement>;
-  private progressLabel: HTMLElement;
   private loadingOverlay: HTMLElement;
   private unmuteBtn: HTMLButtonElement;
   private fallbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(videos: Video[]) {
     this.state = {
-      playlist: shuffle(videos),
+      playlist: [...videos],
       current: 0,
       activePanel: 'a',
       isSliding: false,
       isMuted: true,
     };
 
-    this.progressLabel = document.getElementById('progress-label')!;
     this.loadingOverlay = document.getElementById('loading-overlay')!;
     this.unmuteBtn = document.getElementById('unmute-btn') as HTMLButtonElement;
 
@@ -68,7 +57,13 @@ export class Gallery {
       this.preload('b', 1);
     }
 
+    // Show loading if first video isn't buffered yet
+    if (activePlayer.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+      this.showLoading();
+    }
+
     activePlayer.waitForCanPlay().then(() => {
+      this.hideLoading();
       activePlayer.play().catch(() => {/* autoplay blocked, waiting for user interaction */});
     });
 
@@ -79,9 +74,18 @@ export class Gallery {
       p.on('playing', () => { if (id === this.state.activePanel) this.hideLoading(); });
       p.on('canplay', () => { if (id === this.state.activePanel) this.hideLoading(); });
       p.on('ended', () => { if (id === this.state.activePanel) void this.goNext(); });
+      // When near the end, ensure next video is buffered
+      p.on('timeupdate', () => {
+        if (id !== this.state.activePanel || this.state.isSliding) return;
+        const el = p.videoEl;
+        if (el.duration && el.currentTime > el.duration * 0.75) {
+          const nextIndex = (this.state.current + 1) % this.state.playlist.length;
+          this.preload(this.inactivePanel, nextIndex);
+        }
+      });
     }
 
-    this.updateProgress();
+    this.updateTitle();
     this.updateUnmuteBtn();
   }
 
@@ -104,8 +108,9 @@ export class Gallery {
   }
 
   private preload(panelId: PanelId, index: number): void {
-    if (index < 0 || index >= this.state.playlist.length) return;
-    const url = this.state.playlist[index].url;
+    const { playlist } = this.state;
+    if (index < 0 || index >= playlist.length) return;
+    const url = playlist[index].url;
     const player = this.players[panelId];
     // Only reload if different video
     if (!player.currentSrc.endsWith(url)) {
@@ -117,19 +122,12 @@ export class Gallery {
   private async navigate(direction: 'next' | 'prev'): Promise<void> {
     if (this.state.isSliding) return;
 
+    const { playlist } = this.state;
     let targetIndex: number;
     if (direction === 'next') {
-      targetIndex = this.state.current + 1;
-      if (targetIndex >= this.state.playlist.length) {
-        this.state.playlist = shuffle(this.state.playlist);
-        targetIndex = 0;
-      }
+      targetIndex = (this.state.current + 1) % playlist.length;
     } else {
-      targetIndex = this.state.current - 1;
-      if (targetIndex < 0) {
-        this.state.playlist = shuffle(this.state.playlist);
-        targetIndex = this.state.playlist.length - 1;
-      }
+      targetIndex = (this.state.current - 1 + playlist.length) % playlist.length;
     }
 
     this.state.isSliding = true;
@@ -139,7 +137,7 @@ export class Gallery {
     const incomingPlayer = this.players[incoming];
 
     // Ensure incoming panel has the right video
-    const url = this.state.playlist[targetIndex].url;
+    const url = playlist[targetIndex].url;
     if (!incomingPlayer.currentSrc.endsWith(url)) {
       incomingPlayer.load(url);
     }
@@ -200,13 +198,11 @@ export class Gallery {
     this.setPanelX(outgoing, '100%', false);
 
     // Preload next video into outgoing (now off-screen right)
-    const preloadIndex = this.state.current + 1 < this.state.playlist.length
-      ? this.state.current + 1
-      : 0;
+    const preloadIndex = (this.state.current + 1) % this.state.playlist.length;
     this.preload(outgoing, preloadIndex);
 
     this.state.isSliding = false;
-    this.updateProgress();
+    this.updateTitle();
   }
 
   private setPanelX(panelId: PanelId, x: string, animate: boolean): void {
@@ -225,10 +221,8 @@ export class Gallery {
     this.loadingOverlay.classList.remove('visible');
   }
 
-  private updateProgress(): void {
-    const { current, playlist } = this.state;
-    this.progressLabel.textContent = `${current + 1} / ${playlist.length}`;
-    const video = playlist[current];
+  private updateTitle(): void {
+    const video = this.state.playlist[this.state.current];
     if (video?.title) {
       document.title = video.title;
     }

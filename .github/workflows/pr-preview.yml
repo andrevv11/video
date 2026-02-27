@@ -2,7 +2,7 @@ name: PR Preview
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
 
 permissions:
   contents: write       # push to gh-pages branch
@@ -10,11 +10,12 @@ permissions:
 
 concurrency:
   group: pr-preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: true  # if two pushes land quickly, only deploy the latest
+  cancel-in-progress: true  # closing a PR cancels any in-flight deploy before cleanup runs
 
 jobs:
   deploy-preview:
     name: Deploy PR Preview
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
 
     steps:
@@ -101,3 +102,36 @@ jobs:
                 body,
               });
             }
+
+  cleanup-preview:
+    name: Remove PR Preview
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute branch slug
+        id: slug
+        run: |
+          SLUG=$(echo "${{ github.head_ref }}" \
+            | sed 's/[^a-zA-Z0-9._-]/-/g' \
+            | sed 's/^-//;s/-$//')
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
+      - name: Delete preview directory and push
+        run: |
+          DIR="pr-previews/${{ steps.slug.outputs.slug }}"
+          if [ -d "$DIR" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git rm -rf "$DIR"
+            git commit -m "chore: remove PR preview for ${{ github.head_ref }}"
+            git push origin gh-pages
+          else
+            echo "No preview directory found at $DIR — nothing to clean up."
+          fi

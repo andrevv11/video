@@ -112,10 +112,11 @@ export class Gallery {
     if (index < 0 || index >= playlist.length) return;
     const url = playlist[index].url;
     const player = this.players[panelId];
-    // Only reload if different video
     if (!player.currentSrc.endsWith(url)) {
       player.load(url);
       player.setMuted(true);
+    } else {
+      player.seekToStart();
     }
   }
 
@@ -136,10 +137,12 @@ export class Gallery {
     const incoming = this.inactivePanel;
     const incomingPlayer = this.players[incoming];
 
-    // Ensure incoming panel has the right video
+    // Ensure incoming panel has the right video, reset to first frame
     const url = playlist[targetIndex].url;
     if (!incomingPlayer.currentSrc.endsWith(url)) {
       incomingPlayer.load(url);
+    } else {
+      incomingPlayer.seekToStart();
     }
 
     // Wait for buffer if needed

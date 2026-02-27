@@ -1,0 +1,103 @@
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write       # push to gh-pages branch
+  pull-requests: write  # post comment on PR
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true  # if two pushes land quickly, only deploy the latest
+
+jobs:
+  deploy-preview:
+    name: Deploy PR Preview
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      # Turn the branch name into a filesystem-safe slug.
+      # e.g. "feature/my thing" → "feature-my-thing"
+      - name: Compute branch slug
+        id: slug
+        run: |
+          SLUG=$(echo "${{ github.head_ref }}" \
+            | sed 's/[^a-zA-Z0-9._-]/-/g' \
+            | sed 's/^-//;s/-$//')
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy preview to gh-pages/pr-previews/<slug>/
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          destination_dir: pr-previews/${{ steps.slug.outputs.slug }}
+          keep_files: true  # don't wipe the rest of gh-pages
+
+      # Post (or update) a single comment on the PR with the preview URL.
+      - name: Comment with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const slug  = '${{ steps.slug.outputs.slug }}';
+            const prNumber = context.issue.number;
+
+            const previewUrl =
+              `https://${owner}.github.io/${repo}/pr-previews/${slug}/`;
+
+            const marker = '<!-- pr-preview-comment -->';
+            const body = [
+              marker,
+              '## Preview deployment',
+              '',
+              `**Branch:** \`${{ github.head_ref }}\``,
+              `**URL:** ${previewUrl}`,
+              '',
+              `_Last updated: ${new Date().toUTCString()}_`,
+              '',
+              '_This preview is removed automatically when the PR is closed._',
+            ].join('\n');
+
+            // Find an existing preview comment so we update instead of spam.
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: prNumber,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body,
+              });
+            }

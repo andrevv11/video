@@ -7,21 +7,16 @@ on:
   workflow_dispatch: # allow manual trigger from GitHub UI
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write  # needed to push to gh-pages branch
 
 concurrency:
-  group: pages
+  group: pages-main
   cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -40,11 +35,9 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages (root, preserve pr-previews/)
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: ./public  # deploys public/ including videos/ and bundle.js
-
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          keep_files: true  # preserves pr-previews/ subdirectory between deploys

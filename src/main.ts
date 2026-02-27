@@ -7,7 +7,7 @@ import type { Video } from './types';
 const VIDEOS: Video[] = [
   { url: 'videos/sri_lanka.mov',       title: 'Sri Lanka'        },
   { url: 'videos/uk_glastonbury.mp4',  title: 'UK · Glastonbury' },
-  { url: 'videos/india.mp4',           title: 'India'            },
+  { url: 'videos/India.mov',            title: 'India'            },
 ];
 // ──────────────────────────────────────────────────────────────────────────────
 

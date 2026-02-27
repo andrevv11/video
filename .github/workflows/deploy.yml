@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # allow manual trigger from GitHub UI
 
 permissions:
-  contents: write  # needed to push to gh-pages branch
+  contents: write  # needed to push to gh-pages branch and post commit comments
 
 concurrency:
   group: pages-main
@@ -41,3 +41,29 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           keep_files: true  # preserves pr-previews/ subdirectory between deploys
+
+      - name: Wait for Pages to go live
+        id: wait
+        run: |
+          URL="https://andrevv11.github.io/video/"
+          LIVE=false
+          for i in $(seq 1 18); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+              LIVE=true
+              break
+            fi
+            sleep 5
+          done
+          echo "live=$LIVE" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Comment deployment link on commit
+        if: steps.wait.outputs.live == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
+            --method POST \
+            -f body="Deployed: ${{ steps.wait.outputs.url }}"

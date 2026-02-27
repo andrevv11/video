@@ -5,8 +5,16 @@ import type { Video } from './types';
 // Add your own video filenames here. Place MP4 files in public/videos/.
 // Relative paths work on both localhost and GitHub Pages.
 const VIDEOS: Video[] = [
-  { url: 'videos/sri_lanka.mov',  title: 'Sri Lanka' },
-  { url: 'videos/India.mov',     title: 'India'     },
+  {
+    url: 'videos/sri_lanka.mov',
+    title: 'Sri Lanka',
+    text: 'Sri Lanka — Pearl of the Indian Ocean. Ancient temples, lush tea highlands, and golden coastlines stretching into warm turquoise water.',
+  },
+  {
+    url: 'videos/India.mov',
+    title: 'India',
+    text: 'India — A land of infinite colour. Sacred rivers, spice-filled markets, and a civilisation that stretches back five thousand years.',
+  },
 ];
 // ──────────────────────────────────────────────────────────────────────────────
 

@@ -10,6 +10,9 @@ export class Gallery {
   private panelEls: Record<PanelId, HTMLElement>;
   private loadingOverlay: HTMLElement;
   private unmuteBtn: HTMLButtonElement;
+  private infoBtn: HTMLButtonElement;
+  private infoOverlay: HTMLElement;
+  private infoText: HTMLElement;
   private fallbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(videos: Video[]) {
@@ -19,10 +22,14 @@ export class Gallery {
       activePanel: 'a',
       isSliding: false,
       isMuted: true,
+      isInfoOpen: false,
     };
 
     this.loadingOverlay = document.getElementById('loading-overlay')!;
     this.unmuteBtn = document.getElementById('unmute-btn') as HTMLButtonElement;
+    this.infoBtn = document.getElementById('info-btn') as HTMLButtonElement;
+    this.infoOverlay = document.getElementById('info-overlay')!;
+    this.infoText = document.getElementById('info-text')!;
 
     this.panelEls = {
       a: document.getElementById('panel-a')!,
@@ -73,7 +80,16 @@ export class Gallery {
       p.on('waiting', () => { if (id === this.state.activePanel) this.showLoading(); });
       p.on('playing', () => { if (id === this.state.activePanel) this.hideLoading(); });
       p.on('canplay', () => { if (id === this.state.activePanel) this.hideLoading(); });
-      p.on('ended', () => { if (id === this.state.activePanel) void this.goNext(); });
+      p.on('ended', () => {
+        if (id !== this.state.activePanel) return;
+        if (this.state.isInfoOpen) {
+          // Keep looping the current video while info panel is open
+          p.seekToStart();
+          p.play().catch(() => {/* ok */});
+        } else {
+          void this.goNext();
+        }
+      });
       // When near the end, ensure next video is buffered
       p.on('timeupdate', () => {
         if (id !== this.state.activePanel || this.state.isSliding) return;
@@ -85,8 +101,19 @@ export class Gallery {
       });
     }
 
+    // ── Info button ───────────────────────────────────────────────────────────
+    this.infoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleInfo();
+    });
+
+    this.infoOverlay.addEventListener('click', () => {
+      this.closeInfo();
+    });
+
     this.updateTitle();
     this.updateUnmuteBtn();
+    this.updateInfoText();
   }
 
   goNext(): Promise<void> {
@@ -206,6 +233,7 @@ export class Gallery {
 
     this.state.isSliding = false;
     this.updateTitle();
+    this.updateInfoText();
   }
 
   private setPanelX(panelId: PanelId, x: string, animate: boolean): void {
@@ -234,6 +262,31 @@ export class Gallery {
   private updateUnmuteBtn(): void {
     this.unmuteBtn.textContent = this.state.isMuted ? '🔇' : '🔊';
     this.unmuteBtn.setAttribute('aria-label', this.state.isMuted ? 'Unmute' : 'Mute');
+  }
+
+  private toggleInfo(): void {
+    if (this.state.isInfoOpen) {
+      this.closeInfo();
+    } else {
+      this.openInfo();
+    }
+  }
+
+  private openInfo(): void {
+    this.state.isInfoOpen = true;
+    this.infoOverlay.classList.add('visible');
+    this.infoOverlay.setAttribute('aria-hidden', 'false');
+  }
+
+  private closeInfo(): void {
+    this.state.isInfoOpen = false;
+    this.infoOverlay.classList.remove('visible');
+    this.infoOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  private updateInfoText(): void {
+    const video = this.state.playlist[this.state.current];
+    this.infoText.textContent = video?.text ?? '';
   }
 
   private showError(msg: string): void {

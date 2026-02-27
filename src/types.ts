@@ -1,6 +1,7 @@
 export interface Video {
   url: string;
   title?: string;
+  text?: string;
 }
 
 export type PanelId = 'a' | 'b';
@@ -11,4 +12,5 @@ export interface GalleryState {
   activePanel: PanelId;
   isSliding: boolean;
   isMuted: boolean;
+  isInfoOpen: boolean;
 }

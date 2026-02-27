@@ -4,13 +4,16 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize]
   workflow_dispatch: # allow manual trigger from GitHub UI
 
 permissions:
-  contents: write  # needed to push to gh-pages branch
+  contents: write      # push to gh-pages branch, post commit comments
+  pull-requests: write # post PR comments
 
 concurrency:
-  group: pages-main
+  group: pages-${{ github.ref }}  # separate queues for main vs each PR
   cancel-in-progress: true
 
 jobs:
@@ -35,9 +38,73 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Deploy to gh-pages (root, preserve pr-previews/)
+      # ── Production deploy (push to main) ─────────────────────────────────────
+      - name: Deploy to gh-pages (production)
+        if: github.event_name != 'pull_request'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           keep_files: true  # preserves pr-previews/ subdirectory between deploys
+
+      # ── PR preview deploy ─────────────────────────────────────────────────────
+      - name: Deploy to gh-pages (PR preview)
+        if: github.event_name == 'pull_request'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          destination_dir: pr-previews/${{ github.event.pull_request.number }}
+          keep_files: true
+
+      # ── Resolve the URL for this run ──────────────────────────────────────────
+      - name: Set deployment URL
+        id: url
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "url=https://andrevv11.github.io/video/pr-previews/${{ github.event.pull_request.number }}/" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://andrevv11.github.io/video/" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Wait for Pages to serve the new deploy ────────────────────────────────
+      - name: Wait for Pages to go live
+        id: wait
+        run: |
+          URL="${{ steps.url.outputs.url }}"
+          LIVE=false
+          for i in $(seq 1 18); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+              LIVE=true
+              break
+            fi
+            sleep 5
+          done
+          echo "live=$LIVE" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      # ── PR comment (edit existing to avoid spam on re-push) ───────────────────
+      - name: Comment on PR
+        if: steps.wait.outputs.live == 'true' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --edit-last \
+            --body "Preview deployed: ${{ steps.wait.outputs.url }}" \
+          || gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body "Preview deployed: ${{ steps.wait.outputs.url }}"
+
+      # ── Commit comment for production deploys ─────────────────────────────────
+      - name: Comment on commit
+        if: steps.wait.outputs.live == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
+            --method POST \
+            -f body="Deployed: ${{ steps.wait.outputs.url }}"

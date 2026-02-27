@@ -80,16 +80,7 @@ export class Gallery {
       p.on('waiting', () => { if (id === this.state.activePanel) this.showLoading(); });
       p.on('playing', () => { if (id === this.state.activePanel) this.hideLoading(); });
       p.on('canplay', () => { if (id === this.state.activePanel) this.hideLoading(); });
-      p.on('ended', () => {
-        if (id !== this.state.activePanel) return;
-        if (this.state.isInfoOpen) {
-          // Keep looping the current video while info panel is open
-          p.seekToStart();
-          p.play().catch(() => {/* ok */});
-        } else {
-          void this.goNext();
-        }
-      });
+      p.on('ended', () => { if (id === this.state.activePanel) void this.goNext(); });
       // When near the end, ensure next video is buffered
       p.on('timeupdate', () => {
         if (id !== this.state.activePanel || this.state.isSliding) return;
@@ -274,12 +265,14 @@ export class Gallery {
 
   private openInfo(): void {
     this.state.isInfoOpen = true;
+    this.players[this.state.activePanel].setLoop(true);
     this.infoOverlay.classList.add('visible');
     this.infoOverlay.setAttribute('aria-hidden', 'false');
   }
 
   private closeInfo(): void {
     this.state.isInfoOpen = false;
+    this.players[this.state.activePanel].setLoop(false);
     this.infoOverlay.classList.remove('visible');
     this.infoOverlay.setAttribute('aria-hidden', 'true');
   }

@@ -43,6 +43,10 @@ export class VideoPlayer {
     this.el.muted = muted;
   }
 
+  setLoop(loop: boolean): void {
+    this.el.loop = loop;
+  }
+
   get muted(): boolean {
     return this.el.muted;
   }
